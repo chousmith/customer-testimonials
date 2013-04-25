@@ -29,6 +29,12 @@ so just using [testimonials] will list the first Testimonial listed in the Testi
 
 == Changelog ==
 
+= 1.2.2 =
+* updated [testimonials] shortcode to allow for specifying a Category , via [testimonials cat={cat}] where {cat} = either the ID # or the term slug of the Testimonial Category of your choosing
+
+= 1.2.1 =
+* added Testimonial Categories to the back end : now you can sort your Testimonials for more specific control over what quotes appear where on your site!
+
 = 1.2 =
 * renamed the plugin to ProGo Customer Testimonials
 

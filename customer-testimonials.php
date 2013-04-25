@@ -3,7 +3,7 @@
 Plugin Name: ProGo Customer Testimonials 
 Plugin URI: http://www.progo.com/
 Description: Showcase Testimonials praising your site/product(s), with easy (CPT) control of the content, Widgets to display Testimonials in sidebars, and Shortcodes.
-Version: 1.2.1
+Version: 1.2.2
 Author: ProGo Themes
 Author URI: http://www.progo.com/
 */
@@ -142,7 +142,8 @@ function progo_testimonials_shortcode( $atts ) {
 	
 	extract( shortcode_atts( array(
 		'num' => 1,
-		'order' => $default_order
+		'order' => $default_order,
+		'cat' => false
 	), $atts ) );
 	
 	// sanitize args
@@ -150,6 +151,7 @@ function progo_testimonials_shortcode( $atts ) {
 	if ( $num == 0 ) {
 		$num = -1; // actually need -1 as arg to list ALL
 	}
+	
 	if ( $order == 'menu' ) {
 		$order = 'menu_order';
 	} elseif ( $order == 'random' ) {
@@ -161,6 +163,16 @@ function progo_testimonials_shortcode( $atts ) {
 	
 	$oot = '';
 	$args = array('post_type' => 'progo_testimonials', 'numberposts' => $num, 'orderby' => $order );
+	
+	if ( $cat != false ) {
+		if ( is_numeric($cat) ) {
+			// look up by slug and conver to #
+			$cat = progo_testimonials_term_id_to_slug(absint($cat));
+		}
+		$args['progo_testimonials_cats'] = $cat;
+		//$oot .= '<pre style="display:none" title="scarg">'. print_r($args,true) .'</pre>';
+	}
+	
 	$testimonials = get_posts($args);
 	foreach($testimonials as $t) {
 		$auth = get_post_meta($t->ID,'_progo_testimonials',true);
@@ -262,6 +274,21 @@ function progo_testimonials_scripts() {
 }
 add_action('wp_print_scripts', 'progo_testimonials_scripts');
 
+function progo_testimonials_term_slug_to_id( $slug ) {
+	// convert cat slug to cat ID
+	$term = get_term_by( 'slug', $slug, 'progo_testimonials_cats' );
+	//echo '<pre>'. print_r($term,true) .'</pre>';
+	$id = $term->term_id;
+	return $id;
+}
+
+function progo_testimonials_term_id_to_slug( $id ) {
+	// convert cat slug to cat ID
+	$term = get_term_by( 'id', $id, 'progo_testimonials_cats' );
+	//echo '<pre>'. print_r($term,true) .'</pre>';
+	$slug = $term->slug;
+	return $slug;
+}
 
 /*
  * massive props to mikeschinkel for
@@ -279,9 +306,7 @@ function progo_testimonials_restrict_by_cat() {
 		
 		if ( !is_numeric($selected) ) {
 			// convert cat slug to cat ID
-			$term = get_term_by( 'slug', $selected, 'progo_testimonials_cats' );
-			//echo '<pre>'. print_r($term,true) .'</pre>';
-			$selected = $term->term_id;
+			$selected = progo_testimonials_term_slug_to_id($selected);
 		}
 		
         wp_dropdown_categories(array(
@@ -307,9 +332,7 @@ function progo_testimonials_testimonialcat_to_query_term($query) {
 	}
     if ($pagenow=='edit.php' &&
             isset($qv['progo_testimonials_cats']) && is_numeric($qv['progo_testimonials_cats'])) {
-        $term = get_term_by('id',$qv['progo_testimonials_cats'],'progo_testimonials_cats');
-		//echo '<pre>'. print_r($term,true) .'</pre>';
-        $qv['progo_testimonials_cats'] = $term->slug;
+        $qv['progo_testimonials_cats'] = progo_testimonials_term_id_to_slug($qv['progo_testimonials_cats']);
     }
 }
 
