@@ -2,8 +2,8 @@
 /*
 Plugin Name: ProGo Customer Testimonials 
 Description: Showcase Testimonials praising your site/product(s), with easy (CPT) control of the content, Widgets to display Testimonials in sidebars, and Shortcodes.
-Author: ProGo Themes / Alex Chousmith
-Version: 1.1
+Author: ProGo Themes / alex chousmith
+Version: 1.2
 Author URI: http://www.progo.com/
 */
 
