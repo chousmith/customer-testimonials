@@ -53,8 +53,9 @@ class ProGo_Testimonials_Testimonials extends WP_Widget {
 		$testimonials = get_posts($args);
 		foreach($testimonials as $t) {
 			$auth = get_post_meta($t->ID,'_progo_testimonials',true);
-			echo '<div class="quote"><span class="lq">&ldquo;</span>'. wp_kses(nl2br($t->post_content),array('br'=>array(),'em'=>array(),'strong'=>array())) .'&rdquo;<br /><br />';
-			echo '<div class="by">'. wp_kses($auth[auth],array()) .'<br />'. wp_kses($auth[loc],array()) .'</div></div>';
+			
+			$oot = progo_testimonials_output( $t, $auth, 'widget-testimonials' );
+			echo $oot;
 		}
 		if($autoscroll == 'yes') { ?>
 <script type="text/javascript">

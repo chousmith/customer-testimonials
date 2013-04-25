@@ -1,15 +1,16 @@
 <?php
 /*
 Plugin Name: ProGo Customer Testimonials 
+Plugin URI: http://www.progo.com/
 Description: Showcase Testimonials praising your site/product(s), with easy (CPT) control of the content, Widgets to display Testimonials in sidebars, and Shortcodes.
-Author: ProGo Themes / alex chousmith
-Version: 1.2
+Version: 1.2.1
+Author: ProGo Themes
 Author URI: http://www.progo.com/
 */
 
 function progo_testimonials_action_links( $links, $file ) {
 	if ( $file == plugin_basename( dirname(__FILE__) .'/customer-testimonials.php' ) ) {
-		$links[] = '<a href="#hi">'.__('Testimonials').'</a>';
+		$links[] = '<a href="edit.php?post_type=progo_testimonials">'.__('Testimonials').'</a>';
 	}
 
 	return $links;
@@ -21,7 +22,7 @@ function progo_testimonials_init() {
 	register_post_type( 'progo_testimonials',
 		array(
 			'labels' => array(
-				'name' => 'Testimonials',
+				'name' => 'Customer Testimonials',
 				'singular_name' => 'Testimonial',
 				'add_new_item' => 'Add New Testimonial',
 				'edit_item' => 'Edit Testimonial',
@@ -40,9 +41,33 @@ function progo_testimonials_init() {
 			'menu_position' => 41,
 			'hierarchical' => false,
 			'supports' => array('title','editor','revisions','page-attributes'),
-			'register_meta_box_cb' => 'progo_testimonials_metaboxes'
+			'register_meta_box_cb' => 'progo_testimonials_metaboxes',
+			'taxonomies' => array('progo_testimonials_cats'),
 		)
 	);
+	
+	$labels = array(
+		'name' => _x( 'Testimonial Categories', 'taxonomy general name' ),
+		'singular_name' => _x( 'Testimonial Category', 'taxonomy singular name' ),
+		'search_items' =>  __( 'Search Testimonial Categories' ),
+		'all_items' => __( 'All Testimonial Categories' ),
+		'parent_item' => __( 'Parent Category' ),
+		'parent_item_colon' => __( 'Parent Category:' ),
+		'edit_item' => __( 'Edit Testimonial Category' ), 
+		'update_item' => __( 'Update Category' ),
+		'add_new_item' => __( 'Add New Testimonial Category' ),
+		'new_item_name' => __( 'New Testimonial Category Name' ),
+		'menu_name' => __( 'Categories' ),
+	); 	
+	
+	register_taxonomy('progo_testimonials_cats',array('progo_testimonials'), array(
+		'hierarchical' => true,
+		'labels' => $labels,
+		'show_ui' => true,
+		'show_admin_column' => true,
+		'query_var' => true,
+		'rewrite' => array( 'slug' => 'testimonialcats' ),
+	));
 }
 add_action( 'init', 'progo_testimonials_init' );
 
@@ -112,9 +137,12 @@ add_action( 'widgets_init', 'progo_testimonials_widgets' );
 
 // [testimonials num=1 order="menu"]
 function progo_testimonials_shortcode( $atts ) {
+	$default_order = 'menu_order';
+	$default_order = apply_filters( 'progo_testimonials_default_order', $default_order, $atts );
+	
 	extract( shortcode_atts( array(
 		'num' => 1,
-		'order' => 'menu_order'
+		'order' => $default_order
 	), $atts ) );
 	
 	// sanitize args
@@ -128,7 +156,7 @@ function progo_testimonials_shortcode( $atts ) {
 		$order = 'rand';
 	}
 	if ( !in_array( $order, array( 'date', 'menu_order', 'title', 'ID', 'rand' ) ) ) {
-		$order = 'menu_order';
+		$order = 'menu_order'; // in case default filter sets order to something WP doesnt understand
 	}
 	
 	$oot = '';
@@ -136,12 +164,37 @@ function progo_testimonials_shortcode( $atts ) {
 	$testimonials = get_posts($args);
 	foreach($testimonials as $t) {
 		$auth = get_post_meta($t->ID,'_progo_testimonials',true);
-		$oot .= '<div class="quote"><span class="lq">&ldquo;</span>'. wp_kses(nl2br($t->post_content),array('br'=>array(),'em'=>array(),'strong'=>array())) .'&rdquo;<br /><br />';
-		$oot .= '<div class="by">'. wp_kses($auth[auth],array()) .'<br />'. wp_kses($auth[loc],array()) .'</div></div>';
+		
+		$oot .= progo_testimonials_output( $t, $auth, 'shortcode' );
 	}
 	return $oot;
 }
 add_shortcode( 'testimonials', 'progo_testimonials_shortcode' );
+
+function progo_testimonials_output( $testimonial, $author, $fromwhere ) {
+	$oot = '';
+	
+	$start = '<div class="quote">';
+	$start = apply_filters( 'progo_testimonials_open_tag', $start, $testimonial, $fromwhere );
+	
+	$prequote = '<span class="lq">&ldquo;</span>';
+	$prequote = apply_filters( 'progo_testimonials_pre_quote', $prequote, $testimonial, $fromwhere );
+	
+	$quote = wp_kses(nl2br($testimonial->post_content),array('br'=>array(),'em'=>array(),'strong'=>array()));
+	
+	$postquote = '&rdquo;<br /><br />';
+	$postquote = apply_filters( 'progo_testimonials_post_quote', $postquote, $testimonial, $fromwhere );
+	
+	$auth = '<div class="by">'. wp_kses($author['auth'],array()) .'<br />'. wp_kses($author['loc'],array()) .'</div>';
+	$auth = apply_filters( 'progo_testimonials_byline', $auth, $testimonial, $author, $fromwhere );
+	
+	$close = '</div>';
+	$close = apply_filters( 'progo_testimonials_close_tag', $close, $testimonial, $fromwhere );
+	
+	$oot .= $start . $prequote . $quote . $postquote . $auth . $close;
+	
+	return $oot;
+}
 
 function progo_testimonials_admin_styles() {
 	wp_enqueue_style( 'progo_testimonials_admin', trailingslashit( plugins_url( '', __FILE__ ) ) . 'admin-style.css' );
@@ -185,12 +238,15 @@ function progo_testimonials_columns($column){
 add_action("manage_posts_custom_column",  "progo_testimonials_columns");
 
 function progo_testimonials_edit_columns($columns){
+//wp_die('<pre>'. print_r($columns,true) .'</pre>');
   $columns = array(
     "cb" => "<input type=\"checkbox\" />",
     "title" => "Title",
     "quote" => "Quote",
     "auth" => "Author",
-    "loc" => "Location"
+    "loc" => "Location",
+	"taxonomy-progo_testimonials_cats" => "Categories",
+	"date" => "Date",
   );
  
   return $columns;
@@ -205,3 +261,61 @@ function progo_testimonials_scripts() {
 	}
 }
 add_action('wp_print_scripts', 'progo_testimonials_scripts');
+
+
+/*
+ * massive props to mikeschinkel for
+ * http://wordpress.stackexchange.com/questions/578/adding-a-taxonomy-filter-to-admin-list-for-a-custom-post-type
+ */
+add_action('restrict_manage_posts','progo_testimonials_restrict_by_cat');
+function progo_testimonials_restrict_by_cat() {
+    global $typenow;
+    global $wp_query;
+    if ($typenow=='progo_testimonials') {
+        $taxonomy = 'progo_testimonials_cats';
+        $catstax = get_taxonomy($taxonomy);
+		
+		$selected = $wp_query->query['progo_testimonials_cats'];
+		
+		if ( !is_numeric($selected) ) {
+			// convert cat slug to cat ID
+			$term = get_term_by( 'slug', $selected, 'progo_testimonials_cats' );
+			//echo '<pre>'. print_r($term,true) .'</pre>';
+			$selected = $term->term_id;
+		}
+		
+        wp_dropdown_categories(array(
+            'show_option_all' =>  __("Show All {$catstax->labels->menu_name}"),
+            'taxonomy'        =>  $taxonomy,
+            'name'            =>  'progo_testimonials_cats',
+            'orderby'         =>  'name',
+            'selected'        =>  $selected,
+            'hierarchical'    =>  true,
+            'depth'           =>  3,
+            'show_count'      =>  true, // Show # listings in parens
+            'hide_empty'      =>  true, // Don't show businesses w/o listings
+        ));
+    }
+}
+
+add_filter('parse_query','progo_testimonials_testimonialcat_to_query_term');
+function progo_testimonials_testimonialcat_to_query_term($query) {
+    global $pagenow;
+    $qv = &$query->query_vars;
+	if ( $pagenow == 'edit.php' ) {
+		//echo '<pre>'. print_r($qv,true) .'</pre>';
+	}
+    if ($pagenow=='edit.php' &&
+            isset($qv['progo_testimonials_cats']) && is_numeric($qv['progo_testimonials_cats'])) {
+        $term = get_term_by('id',$qv['progo_testimonials_cats'],'progo_testimonials_cats');
+		//echo '<pre>'. print_r($term,true) .'</pre>';
+        $qv['progo_testimonials_cats'] = $term->slug;
+    }
+}
+
+/*
+ * to do :
+ * + shortcode filter by category
+ * + clean up "Post published..." messages...
+ * + instructions on filters?
+ */
