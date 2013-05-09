@@ -29,6 +29,10 @@ so just using [testimonials] will list the first Testimonial listed in the Testi
 
 == Changelog ==
 
+= 1.2.3 =
+* had wrapped most of the Testimonial quote output pieces in filters, except the actual Testimonial quote (body content) itself
+* this has been remedied with the new "progo_testimonials_quote_body" filter
+
 = 1.2.2 =
 * updated [testimonials] shortcode to allow for specifying a Category , via [testimonials cat={cat}] where {cat} = either the ID # or the term slug of the Testimonial Category of your choosing
 

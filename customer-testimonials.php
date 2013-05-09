@@ -3,7 +3,7 @@
 Plugin Name: ProGo Customer Testimonials 
 Plugin URI: http://www.progo.com/
 Description: Showcase Testimonials praising your site/product(s), with easy (CPT) control of the content, Widgets to display Testimonials in sidebars, and Shortcodes.
-Version: 1.2.2
+Version: 1.2.3
 Author: ProGo Themes
 Author URI: http://www.progo.com/
 */
@@ -193,6 +193,7 @@ function progo_testimonials_output( $testimonial, $author, $fromwhere ) {
 	$prequote = apply_filters( 'progo_testimonials_pre_quote', $prequote, $testimonial, $fromwhere );
 	
 	$quote = wp_kses(nl2br($testimonial->post_content),array('br'=>array(),'em'=>array(),'strong'=>array()));
+	$quote = apply_filters( 'progo_testimonials_quote_body', $quote, $testimonial, $fromwhere );
 	
 	$postquote = '&rdquo;<br /><br />';
 	$postquote = apply_filters( 'progo_testimonials_post_quote', $postquote, $testimonial, $fromwhere );
@@ -338,7 +339,10 @@ function progo_testimonials_testimonialcat_to_query_term($query) {
 
 /*
  * to do :
- * + shortcode filter by category
- * + clean up "Post published..." messages...
- * + instructions on filters?
+ * shortcode filter by category
+ * clean up "Post published..." messages...
+ * instructions on filters?
+ * add ability to totally hide Categories if you don't want them?
+ * OR , start with 1 default category?
+ * and at least hide the filter dropdown on the Testimonials edit page, if there are no cats?
  */
